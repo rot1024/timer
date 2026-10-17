@@ -188,7 +188,8 @@ namespace Timer
             resetButton.Click += (_, __) => ResetTimer();
             Controls.Add(resetButton);
 
-            timer = new System.Windows.Forms.Timer { Interval = 1000 };
+            // 1 秒ちょうどだと Tick の遅れで表示の秒が飛ぶので、細かく回す
+            timer = new System.Windows.Forms.Timer { Interval = 200 };
             timer.Tick += (_, __) => Tick();
 
             resetDuration = TimeSpan.FromMinutes(60);
@@ -348,21 +349,18 @@ namespace Timer
             return TimeSpan.FromSeconds(1);
         }
 
-        private bool TryParseTime(string text, out TimeSpan result)
+        private static bool TryParseTime(string text, out TimeSpan result)
         {
             text = text.Trim();
 
-            if (TimeSpan.TryParse(text, out result))
-                return true;
-
-            if (int.TryParse(text, out int minutesOnly) && minutesOnly > 0)
+            // TimeSpan.TryParse は "25" を 25 日と解釈するので、数字だけなら先に分として扱う
+            if (int.TryParse(text, NumberStyles.None, CultureInfo.InvariantCulture, out int minutesOnly))
             {
                 result = TimeSpan.FromMinutes(minutesOnly);
-                return true;
+                return minutesOnly > 0;
             }
 
-            result = TimeSpan.Zero;
-            return false;
+            return TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out result);
         }
 
         private void ToggleStartPauseResume()
@@ -451,7 +449,6 @@ namespace Timer
                 running = false;
 
                 ShowTaskbarFinished();
-                StartSound();
                 ShowAlert();
 
                 UpdateUiState();
@@ -460,8 +457,10 @@ namespace Timer
 
         private void UpdateLabel()
         {
+            // 切り上げて表示する（00:00:00 になるのは時間切れのときだけ）
+            var shown = TimeSpan.FromSeconds(Math.Ceiling(remaining.TotalSeconds));
             remainLabel.Text =
-                $"{(int)remaining.TotalHours:00}:{remaining.Minutes:00}:{remaining.Seconds:00}";
+                $"{(int)shown.TotalHours:00}:{shown.Minutes:00}:{shown.Seconds:00}";
             UpdateProgressBar();
         }
 
@@ -560,6 +559,8 @@ namespace Timer
             string path = Path.Combine(AppContext.BaseDirectory, "timer.wav");
             if (!File.Exists(path)) return;
 
+            StopSound();
+
             try
             {
                 player = new SoundPlayer(path);
@@ -585,7 +586,10 @@ namespace Timer
 
                 resetDuration = TimeSpan.FromSeconds(Math.Max(1, state.ResetDurationSeconds));
                 initialDuration = resetDuration;
-                remaining = TimeSpan.FromSeconds(Math.Max(1, state.RemainingSeconds));
+                // 時間切れのまま閉じた場合は、リセットしたときの時間から始める
+                remaining = state.RemainingSeconds > 0
+                    ? TimeSpan.FromSeconds(state.RemainingSeconds)
+                    : resetDuration;
                 totalDuration = resetDuration > remaining ? resetDuration : remaining;
                 TopMost = state.TopMost;
                 if (state.WindowX.HasValue && state.WindowY.HasValue)
@@ -617,7 +621,7 @@ namespace Timer
                 var state = new AppState
                 {
                     ResetDurationSeconds = Math.Max(1, (int)resetDuration.TotalSeconds),
-                    RemainingSeconds = Math.Max(0, (int)remaining.TotalSeconds),
+                    RemainingSeconds = Math.Max(0, (int)Math.Ceiling(remaining.TotalSeconds)),
                     Running = running,
                     TopMost = TopMost,
                     WindowX = Location.X,
@@ -673,7 +677,6 @@ namespace Timer
             Color surface = dark ? Color.FromArgb(43, 43, 43) : Color.FromArgb(251, 251, 251);
             Color border = dark ? Color.FromArgb(72, 72, 72) : Color.FromArgb(224, 224, 224);
             Color fore = dark ? Color.FromArgb(245, 245, 245) : Color.FromArgb(32, 32, 32);
-            Color subtleFore = dark ? Color.FromArgb(220, 220, 220) : Color.FromArgb(55, 55, 55);
 
             BackColor = back;
             ForeColor = fore;
@@ -694,7 +697,6 @@ namespace Timer
             timeEditBox.BorderStyle = BorderStyle.FixedSingle;
 
             ApplyButtonTheme();
-            resetButton.ForeColor = subtleFore;
         }
 
         [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
