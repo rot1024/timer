@@ -1,13 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Globalization;
-using System.IO;
 using System.Media;
-using System.Text.Json;
-using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 using Microsoft.Win32;
 
 namespace Timer
@@ -68,9 +63,6 @@ namespace Timer
         public static Font Ui(float size, FontStyle style = FontStyle.Regular) =>
             new(UiFontFamily, size, style);
 
-        public static Font Mono(float size, FontStyle style = FontStyle.Regular) =>
-            new(FontFamily.GenericMonospace, size, style);
-
         public static Font TimerDisplay(float size, FontStyle style = FontStyle.Regular) =>
             new("Consolas", size, style);
     }
@@ -85,19 +77,19 @@ namespace Timer
         private const uint MF_CHECKED = 0x00000008;
         private const uint MF_UNCHECKED = 0x00000000;
 
-        private TimerDisplayLabel remainLabel;
-        private TimerProgressBar progressBar;
-        private TextBox timeEditBox;
-        private Button startPauseResumeButton;
-        private Button resetButton;
+        private readonly TimerDisplayLabel remainLabel;
+        private readonly TimerProgressBar progressBar;
+        private readonly TextBox timeEditBox;
+        private readonly RoundedButton startPauseResumeButton;
+        private readonly RoundedButton resetButton;
 
         private readonly System.Windows.Forms.Timer timer;
         private DateTime endTime;
         private TimeSpan remaining;
-        private TimeSpan initialDuration;
         private TimeSpan resetDuration;
         private TimeSpan totalDuration;
         private TaskbarList? taskbar;
+        private ThemePalette theme = ThemePalette.FromSystem();
 
         private bool editing = false;
         private bool running = false;
@@ -125,7 +117,7 @@ namespace Timer
             Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
             HandleCreated += (_, __) =>
             {
-                EnableTitleBarTheme(this.Handle);
+                EnableTitleBarTheme();
                 InitializeSystemMenu();
             };
             SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
@@ -155,6 +147,7 @@ namespace Timer
                 Size = remainLabel.Size,
                 Font = remainLabel.Font,
                 TextAlign = HorizontalAlignment.Center,
+                BorderStyle = BorderStyle.FixedSingle,
                 Visible = false
             };
             timeEditBox.KeyDown += TimeEditBox_KeyDown;
@@ -168,9 +161,7 @@ namespace Timer
                 Text = AppText.Get("Start"),
                 Location = new Point(24, 172),
                 Size = new Size(264, 64),
-                Font = AppFonts.Ui(12f),
-                BackColor = Color.FromArgb(36, 116, 255),
-                ForeColor = Color.White
+                Font = AppFonts.Ui(12f)
             };
             startPauseResumeButton.Click += (_, __) => ToggleStartPauseResume();
             Controls.Add(startPauseResumeButton);
@@ -181,9 +172,7 @@ namespace Timer
                 Text = AppText.Get("Reset"),
                 Location = new Point(312, 172),
                 Size = new Size(264, 64),
-                Font = AppFonts.Ui(12f),
-                BackColor = Color.FromArgb(238, 155, 0),
-                ForeColor = Color.White
+                Font = AppFonts.Ui(12f)
             };
             resetButton.Click += (_, __) => ResetTimer();
             Controls.Add(resetButton);
@@ -193,12 +182,11 @@ namespace Timer
             timer.Tick += (_, __) => Tick();
 
             resetDuration = TimeSpan.FromMinutes(60);
-            initialDuration = resetDuration;
             remaining = resetDuration;
+            totalDuration = resetDuration;
             LoadAppState();
             UpdateLabel();
 
-            totalDuration = resetDuration;
             this.Shown += (_, __) =>
             {
                 try
@@ -268,7 +256,6 @@ namespace Timer
             {
                 remaining = parsed;
                 resetDuration = parsed;
-                initialDuration = parsed;
                 totalDuration = parsed;
             }
 
@@ -283,35 +270,30 @@ namespace Timer
             startPauseResumeButton.Text = !running
                 ? AppText.Get("Start")
                 : paused ? AppText.Get("Resume") : AppText.Get("Pause");
-            ApplyButtonTheme();
         }
 
         private void TimeEditBox_KeyDown(object? sender, KeyEventArgs e)
         {
-            if (e.KeyCode == Keys.Enter)
+            switch (e.KeyCode)
             {
-                EndTimeEdit(true);
-                e.Handled = true;
-                e.SuppressKeyPress = true;
+                case Keys.Enter:
+                    EndTimeEdit(true);
+                    break;
+                case Keys.Escape:
+                    EndTimeEdit(false);
+                    break;
+                case Keys.Up:
+                    AdjustEditedTime(1);
+                    break;
+                case Keys.Down:
+                    AdjustEditedTime(-1);
+                    break;
+                default:
+                    return;
             }
-            else if (e.KeyCode == Keys.Escape)
-            {
-                EndTimeEdit(false);
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
-            else if (e.KeyCode == Keys.Up)
-            {
-                AdjustEditedTime(1);
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
-            else if (e.KeyCode == Keys.Down)
-            {
-                AdjustEditedTime(-1);
-                e.Handled = true;
-                e.SuppressKeyPress = true;
-            }
+
+            e.Handled = true;
+            e.SuppressKeyPress = true;
         }
 
         private void AdjustEditedTime(int direction)
@@ -324,7 +306,7 @@ namespace Timer
             int secondColon = timeEditBox.Text.IndexOf(':', firstColon + 1);
             TimeSpan step = GetTimeEditStep(caret, firstColon, secondColon);
 
-             if (direction < 0 && step == TimeSpan.FromHours(1) && parsed.TotalHours < 1)
+            if (direction < 0 && step == TimeSpan.FromHours(1) && parsed.TotalHours < 1)
                 return;
 
             TimeSpan updated = parsed.Add(TimeSpan.FromTicks(step.Ticks * direction));
@@ -332,8 +314,7 @@ namespace Timer
             if (updated < TimeSpan.FromSeconds(1))
                 updated = TimeSpan.FromSeconds(1);
 
-            timeEditBox.Text =
-                $"{(int)updated.TotalHours:00}:{updated.Minutes:00}:{updated.Seconds:00}";
+            timeEditBox.Text = FormatTime(updated);
             timeEditBox.SelectionStart = Math.Min(caret, timeEditBox.Text.Length);
             timeEditBox.SelectionLength = 0;
         }
@@ -363,6 +344,11 @@ namespace Timer
             return TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out result);
         }
 
+        private static string FormatTime(TimeSpan time) =>
+            $"{(int)time.TotalHours:00}:{time.Minutes:00}:{time.Seconds:00}";
+
+        private static int CeilingSeconds(TimeSpan time) => (int)Math.Ceiling(time.TotalSeconds);
+
         private void ToggleStartPauseResume()
         {
             if (!running)
@@ -370,12 +356,11 @@ namespace Timer
                 if (remaining <= TimeSpan.Zero)
                     remaining = resetDuration;
 
-                initialDuration = remaining;
-                totalDuration = initialDuration;
+                totalDuration = remaining;
                 endTime = DateTime.Now.Add(remaining);
                 running = true;
                 paused = false;
-                previousRemainingSeconds = (int)Math.Ceiling(remaining.TotalSeconds);
+                previousRemainingSeconds = CeilingSeconds(remaining);
 
                 UpdateLabel();
                 UpdateTaskbarProgress();
@@ -398,18 +383,17 @@ namespace Timer
                 remaining = endTime - DateTime.Now;
                 timer.Stop();
                 paused = true;
-                UpdateUiState();
-                UpdateTaskbarProgress();
             }
             else
             {
                 endTime = DateTime.Now.Add(remaining);
                 timer.Start();
                 paused = false;
-                previousRemainingSeconds = (int)Math.Ceiling(remaining.TotalSeconds);
-                UpdateUiState();
-                UpdateTaskbarProgress();
+                previousRemainingSeconds = CeilingSeconds(remaining);
             }
+
+            UpdateUiState();
+            UpdateTaskbarProgress();
         }
 
         private void ResetTimer()
@@ -423,7 +407,6 @@ namespace Timer
             CloseAlerts();
 
             remaining = resetDuration > TimeSpan.Zero ? resetDuration : TimeSpan.FromMinutes(60);
-            initialDuration = remaining;
             totalDuration = remaining;
             UpdateLabel();
             ClearTaskbarProgress();
@@ -441,7 +424,7 @@ namespace Timer
             UpdateTaskbarProgress();
 
             ShowCrossedWarningOverlay();
-            previousRemainingSeconds = (int)Math.Ceiling(remaining.TotalSeconds);
+            previousRemainingSeconds = CeilingSeconds(remaining);
 
             if (remaining == TimeSpan.Zero)
             {
@@ -458,9 +441,7 @@ namespace Timer
         private void UpdateLabel()
         {
             // 切り上げて表示する（00:00:00 になるのは時間切れのときだけ）
-            var shown = TimeSpan.FromSeconds(Math.Ceiling(remaining.TotalSeconds));
-            remainLabel.Text =
-                $"{(int)shown.TotalHours:00}:{shown.Minutes:00}:{shown.Seconds:00}";
+            remainLabel.Text = FormatTime(TimeSpan.FromSeconds(CeilingSeconds(remaining)));
             UpdateProgressBar();
         }
 
@@ -486,14 +467,7 @@ namespace Timer
                 });
 
                 alerts.Add(f);
-
-                f.Show();
-
-                // 最前面を確実に取る
-                f.TopMost = false;
-                f.TopMost = true;
-                f.BringToFront();
-                f.Activate();
+                f.ShowOnTop();
             }
         }
 
@@ -501,7 +475,7 @@ namespace Timer
         {
             if (!previousRemainingSeconds.HasValue || remaining <= TimeSpan.Zero) return;
 
-            int remainingSeconds = (int)Math.Ceiling(remaining.TotalSeconds);
+            int remainingSeconds = CeilingSeconds(remaining);
             foreach (int minutes in GetWarningThresholdMinutes())
             {
                 int thresholdSeconds = minutes * 60;
@@ -532,17 +506,10 @@ namespace Timer
             return thresholds.Distinct().OrderByDescending(x => x);
         }
 
-        private void ShowWarningOverlay(string message)
+        private static void ShowWarningOverlay(string message)
         {
             foreach (var screen in Screen.AllScreens)
-            {
-                var overlay = new WarningOverlayForm(screen.Bounds, message);
-                overlay.Show();
-                overlay.TopMost = false;
-                overlay.TopMost = true;
-                overlay.BringToFront();
-                overlay.Activate();
-            }
+                new WarningOverlayForm(screen.Bounds, message).ShowOnTop();
         }
 
         private void CloseAlerts()
@@ -585,7 +552,6 @@ namespace Timer
                 if (state == null) return;
 
                 resetDuration = TimeSpan.FromSeconds(Math.Max(1, state.ResetDurationSeconds));
-                initialDuration = resetDuration;
                 // 時間切れのまま閉じた場合は、リセットしたときの時間から始める
                 remaining = state.RemainingSeconds > 0
                     ? TimeSpan.FromSeconds(state.RemainingSeconds)
@@ -600,7 +566,7 @@ namespace Timer
                     running = true;
                     paused = true;
                     timer.Stop();
-                    previousRemainingSeconds = (int)Math.Ceiling(remaining.TotalSeconds);
+                    previousRemainingSeconds = CeilingSeconds(remaining);
                 }
             }
             catch
@@ -621,7 +587,7 @@ namespace Timer
                 var state = new AppState
                 {
                     ResetDurationSeconds = Math.Max(1, (int)resetDuration.TotalSeconds),
-                    RemainingSeconds = Math.Max(0, (int)Math.Ceiling(remaining.TotalSeconds)),
+                    RemainingSeconds = Math.Max(0, CeilingSeconds(remaining)),
                     Running = running,
                     TopMost = TopMost,
                     WindowX = Location.X,
@@ -668,38 +634,43 @@ namespace Timer
             IntPtr menu = GetSystemMenu(Handle, false);
             CheckMenuItem(menu, SYSTEM_MENU_TOPMOST, TopMost ? MF_CHECKED : MF_UNCHECKED);
         }
-        
+
         private void ApplyTheme()
         {
-            bool dark = IsSystemDarkTheme();
-            Color accent = GetSystemAccentColor();
-            Color back = dark ? Color.FromArgb(32, 32, 32) : Color.FromArgb(243, 243, 243);
-            Color surface = dark ? Color.FromArgb(43, 43, 43) : Color.FromArgb(251, 251, 251);
-            Color border = dark ? Color.FromArgb(72, 72, 72) : Color.FromArgb(224, 224, 224);
-            Color fore = dark ? Color.FromArgb(245, 245, 245) : Color.FromArgb(32, 32, 32);
+            theme = ThemePalette.FromSystem();
 
-            BackColor = back;
-            ForeColor = fore;
-            EnableTitleBarTheme(Handle);
+            BackColor = theme.Back;
+            ForeColor = theme.Fore;
+            if (IsHandleCreated)
+                EnableTitleBarTheme();
 
-            remainLabel.BackColor = back;
-            remainLabel.ForeColor = fore;
-            remainLabel.FillColor = surface;
-            remainLabel.BorderColor = border;
+            remainLabel.BackColor = theme.Back;
+            remainLabel.ForeColor = theme.Fore;
+            remainLabel.FillColor = theme.Surface;
+            remainLabel.BorderColor = theme.Border;
             remainLabel.Invalidate();
 
-            progressBar.BackColor = dark ? Color.FromArgb(50, 50, 50) : Color.FromArgb(228, 228, 228);
-            progressBar.ProgressColor = accent;
+            progressBar.BackColor = theme.Track;
+            progressBar.ProgressColor = theme.Accent;
             progressBar.Invalidate();
 
-            timeEditBox.BackColor = surface;
-            timeEditBox.ForeColor = fore;
-            timeEditBox.BorderStyle = BorderStyle.FixedSingle;
+            timeEditBox.BackColor = theme.Surface;
+            timeEditBox.ForeColor = theme.Fore;
 
-            ApplyButtonTheme();
+            startPauseResumeButton.BackColor = theme.Accent;
+            startPauseResumeButton.HoverColor = theme.AccentHover;
+            startPauseResumeButton.PressedColor = theme.AccentPressed;
+            startPauseResumeButton.BorderColor = theme.Accent;
+            startPauseResumeButton.ForeColor = Color.White;
+
+            resetButton.BackColor = theme.Secondary;
+            resetButton.HoverColor = theme.SecondaryHover;
+            resetButton.PressedColor = theme.SecondaryPressed;
+            resetButton.BorderColor = theme.SecondaryBorder;
+            resetButton.ForeColor = theme.Fore;
         }
 
-        [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+        [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(
             IntPtr hwnd,
             int attr,
@@ -715,34 +686,86 @@ namespace Timer
         [DllImport("user32.dll")]
         private static extern uint CheckMenuItem(IntPtr hMenu, int uIDCheckItem, uint uCheck);
 
-        private void ApplyButtonTheme()
+        private void EnableTitleBarTheme()
+        {
+            int useDark = theme.Dark ? 1 : 0;
+            DwmSetWindowAttribute(
+                Handle,
+                DWMWA_USE_IMMERSIVE_DARK_MODE,
+                ref useDark,
+                sizeof(int));
+        }
+
+        private void UpdateTaskbarProgress()
+        {
+            if (taskbar == null || !IsHandleCreated || !Visible)
+                return;
+
+            if (!running)
+            {
+                taskbar.SetState(this.Handle, TBPFLAG.TBPF_NOPROGRESS);
+                return;
+            }
+
+            taskbar.SetState(this.Handle, paused ? TBPFLAG.TBPF_PAUSED : TBPFLAG.TBPF_NORMAL);
+
+            ulong totalMs = (ulong)Math.Max(1, totalDuration.TotalMilliseconds);
+            ulong elapsedMs = (ulong)Math.Max(0, (totalDuration - remaining).TotalMilliseconds);
+            if (elapsedMs > totalMs) elapsedMs = totalMs;
+
+            taskbar.SetValue(this.Handle, elapsedMs, totalMs);
+        }
+
+        private void ClearTaskbarProgress()
+        {
+            if (taskbar == null || !IsHandleCreated || !Visible)
+                return;
+
+            taskbar.SetState(this.Handle, TBPFLAG.TBPF_NOPROGRESS);
+            taskbar.SetValue(this.Handle, 0, 1);
+        }
+
+        private void ShowTaskbarFinished()
+        {
+            if (taskbar == null || !IsHandleCreated)
+                return;
+
+            taskbar.SetState(this.Handle, TBPFLAG.TBPF_ERROR);
+            taskbar.SetValue(this.Handle, 1, 1);
+        }
+    }
+
+    internal sealed record ThemePalette(
+        bool Dark,
+        Color Accent,
+        Color Back,
+        Color Surface,
+        Color Border,
+        Color Fore,
+        Color Track,
+        Color Secondary,
+        Color SecondaryHover,
+        Color SecondaryPressed,
+        Color SecondaryBorder)
+    {
+        public Color AccentHover => AdjustColorBrightness(Accent, Dark ? 0.12f : 0.08f);
+        public Color AccentPressed => AdjustColorBrightness(Accent, Dark ? -0.16f : -0.18f);
+
+        public static ThemePalette FromSystem()
         {
             bool dark = IsSystemDarkTheme();
-            Color accent = GetSystemAccentColor();
-            Color accentHover = AdjustColorBrightness(accent, dark ? 0.12f : 0.08f);
-            Color accentPressed = AdjustColorBrightness(accent, dark ? -0.16f : -0.18f);
-            Color secondary = dark ? Color.FromArgb(59, 59, 59) : Color.FromArgb(255, 255, 255);
-            Color secondaryHover = dark ? Color.FromArgb(69, 69, 69) : Color.FromArgb(246, 246, 246);
-            Color secondaryPressed = dark ? Color.FromArgb(52, 52, 52) : Color.FromArgb(238, 238, 238);
-            Color secondaryText = dark ? Color.FromArgb(245, 245, 245) : Color.FromArgb(32, 32, 32);
-
-            if (startPauseResumeButton is RoundedButton actionButton)
-            {
-                actionButton.BackColor = accent;
-                actionButton.HoverColor = accentHover;
-                actionButton.PressedColor = accentPressed;
-                actionButton.BorderColor = accent;
-                actionButton.ForeColor = Color.White;
-            }
-
-            if (resetButton is RoundedButton secondaryButton)
-            {
-                secondaryButton.BackColor = secondary;
-                secondaryButton.HoverColor = secondaryHover;
-                secondaryButton.PressedColor = secondaryPressed;
-                secondaryButton.BorderColor = dark ? Color.FromArgb(76, 76, 76) : Color.FromArgb(215, 215, 215);
-                secondaryButton.ForeColor = secondaryText;
-            }
+            return new ThemePalette(
+                Dark: dark,
+                Accent: GetSystemAccentColor(),
+                Back: dark ? Color.FromArgb(32, 32, 32) : Color.FromArgb(243, 243, 243),
+                Surface: dark ? Color.FromArgb(43, 43, 43) : Color.FromArgb(251, 251, 251),
+                Border: dark ? Color.FromArgb(72, 72, 72) : Color.FromArgb(224, 224, 224),
+                Fore: dark ? Color.FromArgb(245, 245, 245) : Color.FromArgb(32, 32, 32),
+                Track: dark ? Color.FromArgb(50, 50, 50) : Color.FromArgb(228, 228, 228),
+                Secondary: dark ? Color.FromArgb(59, 59, 59) : Color.FromArgb(255, 255, 255),
+                SecondaryHover: dark ? Color.FromArgb(69, 69, 69) : Color.FromArgb(246, 246, 246),
+                SecondaryPressed: dark ? Color.FromArgb(52, 52, 52) : Color.FromArgb(238, 238, 238),
+                SecondaryBorder: dark ? Color.FromArgb(76, 76, 76) : Color.FromArgb(215, 215, 215));
         }
 
         private static bool IsSystemDarkTheme()
@@ -800,54 +823,6 @@ namespace Timer
                 Math.Clamp(Adjust(color.G), 0, 255),
                 Math.Clamp(Adjust(color.B), 0, 255));
         }
-
-        private void EnableTitleBarTheme(IntPtr handle)
-        {
-            int useDark = IsSystemDarkTheme() ? 1 : 0;
-            DwmSetWindowAttribute(
-                handle,
-                DWMWA_USE_IMMERSIVE_DARK_MODE,
-                ref useDark,
-                sizeof(int));
-        }
-
-        private void UpdateTaskbarProgress()
-        {
-            if (taskbar == null || !IsHandleCreated || !Visible)
-                return;
-
-            if (!running)
-            {
-                taskbar.SetState(this.Handle, TBPFLAG.TBPF_NOPROGRESS);
-                return;
-            }
-
-            taskbar.SetState(this.Handle, paused ? TBPFLAG.TBPF_PAUSED : TBPFLAG.TBPF_NORMAL);
-
-            ulong totalMs = (ulong)Math.Max(1, totalDuration.TotalMilliseconds);
-            ulong elapsedMs = (ulong)Math.Max(0, (totalDuration - remaining).TotalMilliseconds);
-            if (elapsedMs > totalMs) elapsedMs = totalMs;
-
-            taskbar.SetValue(this.Handle, elapsedMs, totalMs);
-        }
-
-        private void ClearTaskbarProgress()
-        {
-            if (taskbar == null || !IsHandleCreated || !Visible)
-                return;
-
-            taskbar.SetState(this.Handle, TBPFLAG.TBPF_NOPROGRESS);
-            taskbar.SetValue(this.Handle, 0, 1);
-        }
-
-        private void ShowTaskbarFinished()
-        {
-            if (taskbar == null || !IsHandleCreated)
-                return;
-
-            taskbar.SetState(this.Handle, TBPFLAG.TBPF_ERROR);
-            taskbar.SetValue(this.Handle, 1, 1);
-        }
     }
 
     public class AppState
@@ -860,15 +835,16 @@ namespace Timer
         public int? WindowY { get; set; }
     }
 
-    public class AlertForm : Form
+    // 全画面に重ねて、フェードイン・フェードアウトするウィンドウ
+    public abstract class OverlayForm : Form
     {
-        private readonly Action onClose;
-        private readonly System.Windows.Forms.Timer fadeTimer;
-        private bool closingWithFade;
+        private readonly System.Windows.Forms.Timer fadeTimer = new() { Interval = 15 };
+        private readonly double maxOpacity;
+        private bool fadingOut;
 
-        public AlertForm(Rectangle bounds, Action onClose)
+        protected OverlayForm(Rectangle bounds, double maxOpacity)
         {
-            this.onClose = onClose;
+            this.maxOpacity = maxOpacity;
 
             Bounds = bounds;
             FormBorderStyle = FormBorderStyle.None;
@@ -877,16 +853,88 @@ namespace Timer
             StartPosition = FormStartPosition.Manual;
             Opacity = 0;
 
-            var label = new Label
+            fadeTimer.Tick += (_, __) =>
             {
-                Text = AppText.Get("TimeUp"),
-                Location = new Point(0, bounds.Height / 2 - 120),
-                Size = new Size(bounds.Width, 120),
+                if (fadingOut)
+                {
+                    Opacity -= 0.08;
+                    if (Opacity <= 0)
+                    {
+                        fadeTimer.Stop();
+                        OnFadedOut();
+                    }
+                }
+                else
+                {
+                    Opacity += 0.08;
+                    if (Opacity >= maxOpacity)
+                    {
+                        Opacity = maxOpacity;
+                        fadeTimer.Stop();
+                        OnFadedIn();
+                    }
+                }
+            };
+        }
+
+        // 最前面を確実に取って表示する
+        public void ShowOnTop()
+        {
+            Show();
+            TopMost = false;
+            TopMost = true;
+            BringToFront();
+            Activate();
+        }
+
+        protected void AddMessageLabel(string text, int top, int height)
+        {
+            Controls.Add(new Label
+            {
+                Text = text,
+                Location = new Point(0, top),
+                Size = new Size(Width, height),
                 TextAlign = ContentAlignment.MiddleCenter,
                 ForeColor = Color.FromArgb(245, 245, 245),
                 BackColor = Color.Transparent,
                 Font = AppFonts.Ui(38f)
-            };
+            });
+        }
+
+        protected void FadeOut()
+        {
+            fadingOut = true;
+            fadeTimer.Start();
+        }
+
+        protected virtual void OnFadedIn()
+        {
+        }
+
+        protected virtual void OnFadedOut() => Close();
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            fadeTimer.Start();
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            fadeTimer.Dispose();
+            base.OnFormClosed(e);
+        }
+    }
+
+    public class AlertForm : OverlayForm
+    {
+        private readonly Action onClose;
+
+        public AlertForm(Rectangle bounds, Action onClose) : base(bounds, 0.96)
+        {
+            this.onClose = onClose;
+
+            AddMessageLabel(AppText.Get("TimeUp"), bounds.Height / 2 - 120, 120);
 
             var button = new RoundedButton
             {
@@ -900,119 +948,55 @@ namespace Timer
                 BorderColor = Color.FromArgb(120, 190, 255),
                 ForeColor = Color.White
             };
-
-            button.Click += (_, __) => CloseWithFade();
-
-            Controls.Add(label);
+            button.Click += (_, __) => FadeOut();
             Controls.Add(button);
-
-            fadeTimer = new System.Windows.Forms.Timer { Interval = 15 };
-            fadeTimer.Tick += (_, __) =>
-            {
-                if (closingWithFade)
-                {
-                    Opacity -= 0.08;
-                    if (Opacity <= 0)
-                    {
-                        fadeTimer.Stop();
-                        onClose();
-                    }
-                }
-                else
-                {
-                    Opacity += 0.08;
-                    if (Opacity >= 0.96)
-                    {
-                        Opacity = 0.96;
-                        fadeTimer.Stop();
-                    }
-                }
-            };
         }
 
-        protected override void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-            fadeTimer.Start();
-        }
-
-        private void CloseWithFade()
-        {
-            closingWithFade = true;
-            fadeTimer.Start();
-        }
+        protected override void OnFadedOut() => onClose();
     }
 
-    public class WarningOverlayForm : Form
+    public class WarningOverlayForm : OverlayForm
     {
         private readonly System.Windows.Forms.Timer displayTimer = new() { Interval = 2000 };
-        private readonly System.Windows.Forms.Timer fadeTimer = new() { Interval = 15 };
-        private bool fadingOut;
 
-        public WarningOverlayForm(Rectangle bounds, string message)
+        public WarningOverlayForm(Rectangle bounds, string message) : base(bounds, 0.92)
         {
-            Bounds = bounds;
-            FormBorderStyle = FormBorderStyle.None;
             ShowInTaskbar = false;
-            TopMost = true;
-            BackColor = Color.FromArgb(4, 42, 80);
-            StartPosition = FormStartPosition.Manual;
-            Opacity = 0;
-
-            var label = new Label
-            {
-                Text = message,
-                Location = new Point(0, bounds.Height / 2 - 64),
-                Size = new Size(bounds.Width, 128),
-                TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = Color.FromArgb(245, 245, 245),
-                BackColor = Color.Transparent,
-                Font = AppFonts.Ui(38f)
-            };
-            Controls.Add(label);
-
-            fadeTimer.Tick += (_, __) =>
-            {
-                if (fadingOut)
-                {
-                    Opacity -= 0.08;
-                    if (Opacity <= 0)
-                    {
-                        fadeTimer.Stop();
-                        Close();
-                    }
-                }
-                else
-                {
-                    Opacity += 0.08;
-                    if (Opacity >= 0.92)
-                    {
-                        Opacity = 0.92;
-                        fadeTimer.Stop();
-                        displayTimer.Start();
-                    }
-                }
-            };
+            AddMessageLabel(message, bounds.Height / 2 - 64, 128);
 
             displayTimer.Tick += (_, __) =>
             {
                 displayTimer.Stop();
-                fadingOut = true;
-                fadeTimer.Start();
+                FadeOut();
             };
         }
 
-        protected override void OnShown(EventArgs e)
-        {
-            base.OnShown(e);
-            fadeTimer.Start();
-        }
+        protected override void OnFadedIn() => displayTimer.Start();
 
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             displayTimer.Dispose();
-            fadeTimer.Dispose();
             base.OnFormClosed(e);
+        }
+    }
+
+    internal static class RoundRect
+    {
+        public static GraphicsPath CreatePath(Rectangle bounds, int radius)
+        {
+            int diameter = Math.Max(1, radius * 2);
+            var path = new GraphicsPath();
+            var arc = new Rectangle(bounds.Location, new Size(diameter, diameter));
+
+            path.AddArc(arc, 180, 90);
+            arc.X = bounds.Right - diameter - 1;
+            path.AddArc(arc, 270, 90);
+            arc.Y = bounds.Bottom - diameter - 1;
+            path.AddArc(arc, 0, 90);
+            arc.X = bounds.Left;
+            path.AddArc(arc, 90, 90);
+            path.CloseFigure();
+            return path;
         }
     }
 
@@ -1030,7 +1014,7 @@ namespace Timer
         protected override void OnPaint(PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            using var path = CreateRoundRectPath(ClientRectangle, CornerRadius);
+            using var path = RoundRect.CreatePath(ClientRectangle, CornerRadius);
             using var fill = new SolidBrush(FillColor);
             using var border = new Pen(BorderColor);
             e.Graphics.FillPath(fill, path);
@@ -1043,23 +1027,6 @@ namespace Timer
                 ClientRectangle,
                 ForeColor,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-        }
-
-        private static GraphicsPath CreateRoundRectPath(Rectangle bounds, int radius)
-        {
-            int diameter = radius * 2;
-            var path = new GraphicsPath();
-            var arc = new Rectangle(bounds.Location, new Size(diameter, diameter));
-
-            path.AddArc(arc, 180, 90);
-            arc.X = bounds.Right - diameter - 1;
-            path.AddArc(arc, 270, 90);
-            arc.Y = bounds.Bottom - diameter - 1;
-            path.AddArc(arc, 0, 90);
-            arc.X = bounds.Left;
-            path.AddArc(arc, 90, 90);
-            path.CloseFigure();
-            return path;
         }
     }
 
@@ -1088,7 +1055,7 @@ namespace Timer
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
-            using var trackPath = CreateRoundRectPath(ClientRectangle, Height / 2);
+            using var trackPath = RoundRect.CreatePath(ClientRectangle, Height / 2);
             using var trackBrush = new SolidBrush(BackColor);
             e.Graphics.FillPath(trackBrush, trackPath);
 
@@ -1096,26 +1063,9 @@ namespace Timer
             if (progressWidth <= 0) return;
 
             var progressBounds = new Rectangle(0, 0, progressWidth, Height);
-            using var progressPath = CreateRoundRectPath(progressBounds, Height / 2);
+            using var progressPath = RoundRect.CreatePath(progressBounds, Height / 2);
             using var progressBrush = new SolidBrush(ProgressColor);
             e.Graphics.FillPath(progressBrush, progressPath);
-        }
-
-        private static GraphicsPath CreateRoundRectPath(Rectangle bounds, int radius)
-        {
-            int diameter = Math.Max(1, radius * 2);
-            var path = new GraphicsPath();
-            var arc = new Rectangle(bounds.Location, new Size(diameter, diameter));
-
-            path.AddArc(arc, 180, 90);
-            arc.X = bounds.Right - diameter - 1;
-            path.AddArc(arc, 270, 90);
-            arc.Y = bounds.Bottom - diameter - 1;
-            path.AddArc(arc, 0, 90);
-            arc.X = bounds.Left;
-            path.AddArc(arc, 90, 90);
-            path.CloseFigure();
-            return path;
         }
     }
 
@@ -1172,7 +1122,7 @@ namespace Timer
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
             Color fillColor = pressed ? PressedColor : hovered ? HoverColor : BackColor;
 
-            using var path = CreateRoundRectPath(ClientRectangle, CornerRadius);
+            using var path = RoundRect.CreatePath(ClientRectangle, CornerRadius);
             using var fill = new SolidBrush(fillColor);
             using var border = new Pen(BorderColor);
             e.Graphics.FillPath(fill, path);
@@ -1186,23 +1136,6 @@ namespace Timer
                 ForeColor,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
         }
-
-        private static GraphicsPath CreateRoundRectPath(Rectangle bounds, int radius)
-        {
-            int diameter = radius * 2;
-            var path = new GraphicsPath();
-            var arc = new Rectangle(bounds.Location, new Size(diameter, diameter));
-
-            path.AddArc(arc, 180, 90);
-            arc.X = bounds.Right - diameter - 1;
-            path.AddArc(arc, 270, 90);
-            arc.Y = bounds.Bottom - diameter - 1;
-            path.AddArc(arc, 0, 90);
-            arc.X = bounds.Left;
-            path.AddArc(arc, 90, 90);
-            path.CloseFigure();
-            return path;
-        }
     }
 
     // progress bar on task bar
@@ -1213,59 +1146,25 @@ namespace Timer
     {
     }
 
+    // COM の vtable の順に、使うメソッドまでを並べる（ITaskbarList → ITaskbarList2 → ITaskbarList3）
     [ComImport]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    [Guid("56FDF342-FD6D-11d0-958A-006097C9A090")]
-    internal interface ITaskbarList
+    [Guid("EA1AFB91-9E28-4B86-90E9-9E9F8A5EEA84")]
+    internal interface ITaskbarList3
     {
+        // ITaskbarList
         void HrInit();
         void AddTab(IntPtr hwnd);
         void DeleteTab(IntPtr hwnd);
         void ActivateTab(IntPtr hwnd);
         void SetActiveAlt(IntPtr hwnd);
-    }
 
-    [ComImport]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    [Guid("602D4995-B13A-429b-A66E-1935E44F4317")]
-    internal interface ITaskbarList2 : ITaskbarList
-    {
-        new void HrInit();
-        new void AddTab(IntPtr hwnd);
-        new void DeleteTab(IntPtr hwnd);
-        new void ActivateTab(IntPtr hwnd);
-        new void SetActiveAlt(IntPtr hwnd);
-
+        // ITaskbarList2
         void MarkFullscreenWindow(IntPtr hwnd, [MarshalAs(UnmanagedType.Bool)] bool fFullscreen);
-    }
 
-    [ComImport]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    [Guid("EA1AFB91-9E28-4B86-90E9-9E9F8A5EEA84")]
-    internal interface ITaskbarList3 : ITaskbarList2
-    {
-        new void HrInit();
-        new void AddTab(IntPtr hwnd);
-        new void DeleteTab(IntPtr hwnd);
-        new void ActivateTab(IntPtr hwnd);
-        new void SetActiveAlt(IntPtr hwnd);
-
-        new void MarkFullscreenWindow(IntPtr hwnd, [MarshalAs(UnmanagedType.Bool)] bool fFullscreen);
-
+        // ITaskbarList3
         void SetProgressValue(IntPtr hwnd, ulong ullCompleted, ulong ullTotal);
         void SetProgressState(IntPtr hwnd, TBPFLAG tbpFlags);
-
-        // 以降は未使用でも vtable を合わせるために必要
-        void RegisterTab(IntPtr hwndTab, IntPtr hwndMDI);
-        void UnregisterTab(IntPtr hwndTab);
-        void SetTabOrder(IntPtr hwndTab, IntPtr hwndInsertBefore);
-        void SetTabActive(IntPtr hwndTab, IntPtr hwndMDI, uint dwReserved);
-        void ThumbBarAddButtons(IntPtr hwnd, uint cButtons, IntPtr pButton);
-        void ThumbBarUpdateButtons(IntPtr hwnd, uint cButtons, IntPtr pButton);
-        void ThumbBarSetImageList(IntPtr hwnd, IntPtr himl);
-        void SetOverlayIcon(IntPtr hwnd, IntPtr hIcon, [MarshalAs(UnmanagedType.LPWStr)] string pszDescription);
-        void SetThumbnailTooltip(IntPtr hwnd, [MarshalAs(UnmanagedType.LPWStr)] string pszTip);
-        void SetThumbnailClip(IntPtr hwnd, IntPtr prcClip);
     }
 
     internal enum TBPFLAG
