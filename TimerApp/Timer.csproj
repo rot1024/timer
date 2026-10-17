@@ -6,14 +6,9 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
-    <ApplicationIcon>timer.ico</ApplicationIcon>
+    <ApplicationIcon>..\timer.ico</ApplicationIcon>
     <AssemblyName>Timer</AssemblyName>
     <RootNamespace>Timer</RootNamespace>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Compile Remove="Program_backup.cs" />
-    <Compile Remove="build.cmd" />
-  </ItemGroup>
 </Project>

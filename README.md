@@ -52,7 +52,13 @@ build.cmd
 | パス | 内容 |
 | --- | --- |
 | `TimerApp/` | 本体（WinForms アプリ） |
+| `TimerApp/MainForm.cs` | メインのウィンドウ |
+| `TimerApp/Countdown.cs` | 残り時間と状態（UI に依存しない） |
+| `TimerApp/AppState.cs` | 設定の保存と読み込み |
+| `TimerApp/ThemePalette.cs` | ライト / ダークテーマの配色 |
+| `TimerApp/Controls/` | 角丸のボタンなど、自作のコントロール |
+| `TimerApp/Overlays/` | 全画面に出す「あと N 分」「時間です」の表示 |
+| `TimerApp/Native/` | Win32 API とタスクバーの COM の呼び出し |
 | `deploy.sh` | ビルドして Dropbox にコピーするスクリプト |
 | `timer.ps1` | PowerShell 版のタイマー（Dropbox の `Timer.lnk` から起動） |
-| `timer.cs` | 単体の C# ファイルとして書いた旧版 |
-| `timer.ico` / `timer.png` / `timer.svg` | アイコン |
+| `timer.ico` / `timer.png` / `timer.svg` | アイコン（`timer.ico` は exe のアイコンにも使います） |
