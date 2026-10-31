@@ -1,0 +1,34 @@
+[package]
+name = "timer-app"
+description = "A simple countdown timer that covers every display when time is up."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "timer_app"
+
+[[bin]]
+name = "timer"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+timer-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tauri = { version = "2", features = ["macos-private-api"] }
+sys-locale = "0.3"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.61", features = [
+  "Win32_Media_Audio",
+  "Win32_System_Registry",
+] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"

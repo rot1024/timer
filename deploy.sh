@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
-# Build a self-contained single-file Timer.exe and copy it to Dropbox.
+# WSL / Linux から Windows 用の Timer.exe をビルドして、Dropbox にコピーする。
+#
+# 必要なもの（初回だけ）:
+#   rustup target add x86_64-pc-windows-msvc
+#   cargo install --locked cargo-xwin
+#   sudo apt install clang lld llvm   # cargo-xwin が clang-cl / lld-link / llvm-rc を使う
 set -euo pipefail
 
 cd "$(dirname "$0")"
 
 DEST="${TIMER_DEST:-/mnt/c/Users/rot1024/Dropbox/creation/misc/timer/TimerApp.exe}"
+TARGET=x86_64-pc-windows-msvc
 
-export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
+npm ci
+# インストーラは作らず、exe だけを作る。ページは exe の中に入るので、exe 1 つで動く
+npm run tauri -- build --runner cargo-xwin --target "$TARGET" --no-bundle
 
-dotnet publish TimerApp/Timer.csproj \
-  -c Release \
-  -r win-x64 \
-  --self-contained \
-  -p:PublishSingleFile=true \
-  -o dist
-
-# WinForms does not need the WPF native DLLs that are published next to the exe,
-# so only Timer.exe is copied.
-if ! cp dist/Timer.exe "$DEST"; then
+EXE="target/$TARGET/release/timer.exe"
+if ! cp "$EXE" "$DEST"; then
   echo "error: could not overwrite $DEST (is the timer running?)" >&2
   exit 1
 fi
 
-echo "copied dist/Timer.exe -> $DEST"
+echo "copied $EXE -> $DEST"

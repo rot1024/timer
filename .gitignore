@@ -1,3 +1,9 @@
-bin/
-obj/
-dist/
+/target
+/dist
+/node_modules
+*.log
+.DS_Store
+
+# Tauri がビルドのたびに OS ごとに作り直す。capabilities が指しているのは desktop-schema.json だけなので、それだけ残す
+/src-tauri/gen/schemas/*-schema.json
+!/src-tauri/gen/schemas/desktop-schema.json

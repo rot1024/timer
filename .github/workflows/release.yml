@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  # 公開せずにビルドだけする
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # macos-14 は arm64 なので、Apple silicon 向けだけを作る
+          - os: macos-14
+            label: macos-arm64
+            bundles: app,dmg
+          - os: windows-latest
+            label: windows-x64
+            bundles: nsis
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: release-${{ matrix.label }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # タグのときだけリリースを作る
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          releaseName: Timer ${{ github.ref_name }}
+          releaseDraft: true
+          args: --bundles ${{ matrix.bundles }}
+
+      # Windows はインストーラのほかに、そのまま動く exe も残す
+      - uses: actions/upload-artifact@v4
+        with:
+          name: timer-${{ matrix.label }}
+          path: |
+            target/release/bundle/dmg/*.dmg
+            target/release/bundle/nsis/*.exe
+            target/release/timer.exe
+          if-no-files-found: error

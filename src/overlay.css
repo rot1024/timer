@@ -1,0 +1,71 @@
+/* ウィンドウは透明にして、ここで暗幕を描く。フェードもここでする */
+html {
+  background: transparent;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+body {
+  position: relative;
+  background: rgb(4 42 80);
+  color: #f5f5f5;
+  font-family: system-ui, "Segoe UI", "Yu Gothic UI", "Hiragino Sans", sans-serif;
+  opacity: 0;
+  transition: opacity 180ms linear;
+}
+
+body.shown {
+  opacity: var(--max-opacity, 0.92);
+}
+
+#message {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  margin: 0;
+  transform: translateY(-50%);
+  text-align: center;
+  font-size: 51px;
+}
+
+body.alert #message {
+  transform: translateY(calc(-50% - 60px));
+}
+
+#ok {
+  position: absolute;
+  left: 50%;
+  top: calc(50% + 36px);
+  width: 180px;
+  height: 56px;
+  transform: translateX(-50%);
+  border: 1px solid rgb(120 190 255);
+  border-radius: 8px;
+  background: rgb(60 150 255);
+  color: #fff;
+  font: inherit;
+  font-size: 17px;
+  cursor: pointer;
+}
+
+#ok:hover {
+  background: rgb(82 166 255);
+}
+
+#ok:active {
+  background: rgb(25 118 210);
+}
+
+#ok:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}

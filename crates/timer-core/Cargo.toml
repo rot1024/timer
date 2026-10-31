@@ -1,0 +1,14 @@
+[package]
+name = "timer-core"
+description = "The countdown and saved state of Timer, with no UI or OS dependencies."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
