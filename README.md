@@ -2,6 +2,8 @@
 
 Windows / macOS 用のシンプルなカウントダウンタイマーです（Tauri v2）。
 
+<img src="docs/screenshot.png" alt="Timer のウィンドウ。残り 00:25:00 で一時停止していて、進み具合のバーと「再開」「リセット」のボタンがある" width="602" />
+
 ## 機能
 
 - 残り時間を大きく表示し、開始・一時停止・再開・リセットができます。
@@ -82,4 +84,5 @@ xattr -dr com.apple.quarantine /Applications/Timer.app
 | `src/time.ts` | 時間の入力の読み取りと、`↑` / `↓` での増減 |
 | `deploy.sh` | Windows 用の exe をビルドして Dropbox にコピーするスクリプト |
 | `timer.ps1` | PowerShell 版のタイマー（Dropbox の `Timer.lnk` から起動） |
+| `docs/screenshot.png` | README のスクリーンショット（Windows 11、ダークテーマ） |
 | `timer.svg` / `timer.png` / `timer.ico` | アイコンの元。`src-tauri/icons/` は `npx tauri icon timer.png -o src-tauri/icons` で作ったもの |
