@@ -10,13 +10,15 @@
   --secondary-hover: #f6f6f6;
   --secondary-pressed: #eeeeee;
   --secondary-border: #d7d7d7;
+  --edit-border: #7a7a7a;
   --accent-hover: color-mix(in srgb, var(--accent), white 8%);
   --accent-pressed: color-mix(in srgb, var(--accent), black 18%);
 }
 
-/* macOS（WKWebView）は OS のアクセントカラーを CSS で読める。Windows ではアプリが読んで --accent に入れる */
+/* macOS（WKWebView）は OS のアクセントカラーを CSS で読める。Windows ではアプリがレジストリから読んで --accent に入れる
+   （Chromium の AccentColor は、WinForms 版が使っていた色と違う） */
 @supports (color: AccentColor) {
-  :root {
+  :root[data-platform="mac"] {
     --accent: AccentColor;
   }
 }
@@ -32,6 +34,7 @@
     --secondary-hover: #454545;
     --secondary-pressed: #343434;
     --secondary-border: #4c4c4c;
+    --edit-border: #646464;
     --accent-hover: color-mix(in srgb, var(--accent), white 12%);
     --accent-pressed: color-mix(in srgb, var(--accent), black 16%);
   }
@@ -100,8 +103,14 @@ input.display {
   -webkit-user-select: text;
 }
 
-input.display:focus {
-  border-color: var(--accent);
+/* WinForms 版の TextBox と同じく、フォーカスがあっても枠の色は変えず、選択範囲は OS の選択色にする */
+input.display {
+  border-color: var(--edit-border);
+}
+
+input.display::selection {
+  background: Highlight;
+  color: HighlightText;
 }
 
 .progress {

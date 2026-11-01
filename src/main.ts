@@ -22,6 +22,7 @@ let current: Snapshot | null = null;
 let editing = false;
 
 document.documentElement.lang = lang;
+if (/Mac/.test(navigator.userAgent)) document.documentElement.dataset.platform = "mac";
 reset.textContent = text.reset;
 
 function render(snapshot: Snapshot) {
