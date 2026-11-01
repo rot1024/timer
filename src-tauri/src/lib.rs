@@ -27,7 +27,7 @@ const TICK_INTERVAL: Duration = Duration::from_millis(200);
 
 /// ウィンドウの中身の大きさ（論理ピクセル）
 const MAIN_WIDTH: f64 = 600.0;
-const MAIN_HEIGHT: f64 = 284.0;
+const MAIN_HEIGHT: f64 = 260.0;
 
 struct Inner {
     session: Session,
