@@ -122,7 +122,9 @@ input.display:focus {
   flex: 1;
   height: 64px;
   border-radius: 8px;
-  border: 1px solid;
+  /* 色は .primary / .secondary で決める（ここで border を書くと、そちらより強くなる） */
+  border-width: 1px;
+  border-style: solid;
   font: inherit;
   font-size: 16px;
   cursor: pointer;
