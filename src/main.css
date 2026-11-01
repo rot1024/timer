@@ -41,6 +41,11 @@
   box-sizing: border-box;
 }
 
+/* .display の display: block が hidden 属性に勝たないように */
+[hidden] {
+  display: none !important;
+}
+
 html,
 body {
   margin: 0;
