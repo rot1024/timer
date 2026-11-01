@@ -85,6 +85,7 @@ pub fn show(app: &AppHandle, kind: Kind) {
             WebviewUrl::App("overlay.html".into()),
         )
         .title("Timer")
+        .additional_browser_args(crate::BROWSER_ARGS)
         .initialization_script(kind.init_script())
         .decorations(false)
         .shadow(false)

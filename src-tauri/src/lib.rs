@@ -22,6 +22,13 @@ use timer_core::{Countdown, Settings, TimerState};
 pub const MAIN: &str = "main";
 const MENU_TOP_MOST: &str = "top-most";
 
+/// WebView2 の起動オプション（Windows だけで効く）。全部のウィンドウで同じにする（違うと同じプロセスで動かせない）。
+///
+/// 前半は wry の既定。`--force-color-profile=srgb` は、Chromium がディスプレイの色プロファイルに合わせて
+/// 色を変換しないようにする。変換されると、アクセントカラーが WinForms 版（GDI はそのまま出す）よりくすんで見える
+pub const BROWSER_ARGS: &str =
+    "--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --force-color-profile=srgb";
+
 /// 1 秒ちょうどだと遅れで表示の秒が飛ぶので、細かく回す
 const TICK_INTERVAL: Duration = Duration::from_millis(200);
 
@@ -209,6 +216,7 @@ fn spawn_ticker(app: AppHandle) {
 fn build_main_window(app: &AppHandle, settings: &Settings) -> tauri::Result<()> {
     let window = WebviewWindowBuilder::new(app, MAIN, WebviewUrl::App("index.html".into()))
         .title(text::app_title())
+        .additional_browser_args(BROWSER_ARGS)
         .inner_size(MAIN_WIDTH, MAIN_HEIGHT)
         .resizable(false)
         .maximizable(false)
