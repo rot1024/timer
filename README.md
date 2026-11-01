@@ -2,7 +2,7 @@
 
 Windows / macOS 用のシンプルなカウントダウンタイマーです（Tauri v2）。
 
-<img src="docs/screenshot.png" alt="Timer のウィンドウ。残り 00:25:00 で一時停止していて、進み具合のバーと「再開」「リセット」のボタンがある" width="602" height="290" />
+<img src="docs/screenshot.png" alt="Timer のウィンドウ。残り 00:25:00 で一時停止していて、進み具合のバーと「再開」「リセット」のボタンがある" width="302" height="172" />
 
 ## 機能
 
