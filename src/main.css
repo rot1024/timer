@@ -59,21 +59,27 @@ body {
   cursor: default;
 }
 
+/*
+ * 大きさは WinForms 版の見た目に合わせてある。WinForms 版は、文字は pt 指定なので DPI に合わせて大きくなる一方、
+ * 位置と大きさは物理ピクセルのままだった。いつも使う 200% の画面での見た目を写すため、
+ * 位置と大きさは WinForms 版の値の半分（論理ピクセル）、文字は同じ pt にしている。
+ */
 main {
-  padding: 24px;
+  padding: 12px;
 }
 
 .display {
   display: block;
   width: 100%;
-  height: 124px;
+  height: 62px;
   margin: 0;
+  padding: 0;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 8px;
   background: var(--surface);
   color: var(--fore);
   font-family: ui-monospace, Consolas, "SF Mono", Menlo, monospace;
-  font-size: 51px;
+  font-size: 38pt;
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
@@ -99,9 +105,9 @@ input.display:focus {
 }
 
 .progress {
-  height: 6px;
-  margin-top: 4px;
-  border-radius: 3px;
+  height: 3px;
+  margin-top: 2px;
+  border-radius: 1.5px;
   background: var(--track);
   overflow: hidden;
 }
@@ -109,25 +115,26 @@ input.display:focus {
 #progress-value {
   height: 100%;
   width: 0;
-  border-radius: 3px;
+  border-radius: 1.5px;
   background: var(--accent);
 }
 
 .buttons {
   display: flex;
-  gap: 24px;
-  margin-top: 14px;
+  gap: 12px;
+  margin-top: 7px;
 }
 
 .buttons button {
   flex: 1;
-  height: 64px;
-  border-radius: 8px;
+  height: 32px;
+  padding: 0;
+  border-radius: 4px;
   /* 色は .primary / .secondary で決める（ここで border を書くと、そちらより強くなる） */
   border-width: 1px;
   border-style: solid;
   font: inherit;
-  font-size: 16px;
+  font-size: 12pt;
   cursor: pointer;
 }
 

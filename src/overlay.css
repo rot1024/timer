@@ -1,4 +1,5 @@
-/* ウィンドウは透明にして、ここで暗幕を描く。フェードもここでする */
+/* ウィンドウは透明にして、ここで暗幕を描く。フェードもここでする。
+   大きさは main.css と同じく、WinForms 版の位置と大きさの半分、文字は同じ pt */
 html {
   background: transparent;
 }
@@ -34,26 +35,27 @@ body.shown {
   margin: 0;
   transform: translateY(-50%);
   text-align: center;
-  font-size: 51px;
+  font-size: 38pt;
 }
 
 body.alert #message {
-  transform: translateY(calc(-50% - 60px));
+  transform: translateY(calc(-50% - 30px));
 }
 
 #ok {
   position: absolute;
   left: 50%;
-  top: calc(50% + 36px);
-  width: 180px;
-  height: 56px;
+  top: calc(50% + 18px);
+  width: 90px;
+  height: 28px;
+  padding: 0;
   transform: translateX(-50%);
   border: 1px solid rgb(120 190 255);
-  border-radius: 8px;
+  border-radius: 4px;
   background: rgb(60 150 255);
   color: #fff;
   font: inherit;
-  font-size: 17px;
+  font-size: 13pt;
   cursor: pointer;
 }
 

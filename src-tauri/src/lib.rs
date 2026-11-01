@@ -25,9 +25,9 @@ const MENU_TOP_MOST: &str = "top-most";
 /// 1 秒ちょうどだと遅れで表示の秒が飛ぶので、細かく回す
 const TICK_INTERVAL: Duration = Duration::from_millis(200);
 
-/// ウィンドウの中身の大きさ（論理ピクセル）
-const MAIN_WIDTH: f64 = 600.0;
-const MAIN_HEIGHT: f64 = 260.0;
+/// ウィンドウの中身の大きさ（論理ピクセル）。WinForms 版の ClientSize（600x284、物理ピクセルのままだった）の半分
+const MAIN_WIDTH: f64 = 300.0;
+const MAIN_HEIGHT: f64 = 142.0;
 
 struct Inner {
     session: Session,
