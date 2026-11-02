@@ -9,8 +9,10 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-# コピー先は Windows のパス。WSL の /mnt/c からは AppData\Local\Timer が見えないことがあるので、Windows 側でコピーする
-DEST="${TIMER_DEST:-%LOCALAPPDATA%\\Timer\\timer.exe}"
+# Windows の環境変数は cmd.exe から読む。コピーは WSL の cp で行う
+# （パッケージアプリの中から動かす powershell.exe だと、AppData への書き込みがアプリ専用の場所に振り替えられる）
+LOCALAPPDATA_WIN="$(cd /mnt/c && cmd.exe /c 'echo %LOCALAPPDATA%' | tr -d '\r')"
+DEST="${TIMER_DEST:-$(wslpath -u "$LOCALAPPDATA_WIN")/Timer/timer.exe}"
 TARGET=x86_64-pc-windows-msvc
 
 if [ -f "$HOME/.cargo/env" ]; then
@@ -22,9 +24,8 @@ npm ci
 npm run tauri -- build --runner cargo-xwin --target "$TARGET" --no-bundle
 
 EXE="target/$TARGET/release/timer.exe"
-if ! TIMER_SRC="$(wslpath -w "$EXE")" TIMER_DEST="$DEST" WSLENV=TIMER_SRC:TIMER_DEST powershell.exe -NoProfile -Command \
-  'Copy-Item -LiteralPath $env:TIMER_SRC -Destination ([Environment]::ExpandEnvironmentVariables($env:TIMER_DEST)) -Force -ErrorAction Stop'; then
-  echo "error: could not overwrite $DEST (is the timer running?)" >&2
+if ! cp "$EXE" "$DEST"; then
+  echo "error: could not overwrite $DEST (is the timer running, or not installed yet?)" >&2
   exit 1
 fi
 

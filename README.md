@@ -2,7 +2,7 @@
 
 Windows / macOS 用のシンプルなカウントダウンタイマーです（Tauri v2）。
 
-<img src="docs/screenshot.png" alt="Timer のウィンドウ。残り 00:25:00 で一時停止していて、進み具合のバーと「再開」「リセット」のボタンがある" width="302" height="172" />
+<img src="docs/screenshot.png" alt="Timer のウィンドウ。残り 00:00:00 で、開始とリセットのボタンが並んでいる" width="300" height="170" />
 
 ## 機能
 
@@ -54,7 +54,7 @@ cargo test -p timer-core
 
 [cargo-xwin](https://github.com/rust-cross/cargo-xwin) で Windows 用の `timer.exe` をビルドし、インストール先（`%LOCALAPPDATA%\Timer\timer.exe`）に上書きコピーします。exe 1 つで動きます（Windows 10 / 11 に入っている WebView2 を使います）。初回に要るものは、`deploy.sh` の先頭に書いてあります。
 
-- コピー先は、環境変数 `TIMER_DEST` に Windows のパスで指定すると変更できます。
+- コピー先は、環境変数 `TIMER_DEST` に WSL のパスで指定すると変更できます。
 - タイマーを起動したままだと上書きできないので、先に閉じてから実行してください。
 
 ### Windows / macOS の上でビルドする
