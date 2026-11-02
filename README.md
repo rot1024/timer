@@ -85,4 +85,5 @@ xattr -dr com.apple.quarantine /Applications/Timer.app
 | `deploy.sh` | Windows 用の exe をビルドして Dropbox にコピーするスクリプト |
 | `timer.ps1` | PowerShell 版のタイマー（Dropbox の `Timer.lnk` から起動） |
 | `docs/screenshot.png` | README のスクリーンショット（Windows 11、ダークテーマ） |
-| `timer.svg` / `timer.png` / `timer.ico` | アイコンの元。`src-tauri/icons/` は `npx tauri icon timer.png -o src-tauri/icons` で作ったもの |
+| `app-icon.svg` | アプリのアイコンの元。`src-tauri/icons/` は `npx tauri icon app-icon.svg -o src-tauri/icons` で作り、モバイル用と Store 用は消している |
+| `timer.svg` / `timer.png` / `timer.ico` | WinForms 版のアイコン（白い砂時計）。`app-icon.svg` の砂時計はこれと同じ形 |
