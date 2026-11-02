@@ -52,9 +52,9 @@ cargo test -p timer-core
 ./deploy.sh
 ```
 
-[cargo-xwin](https://github.com/rust-cross/cargo-xwin) で Windows 用の `timer.exe` をビルドし、Dropbox の `TimerApp.exe` に上書きコピーします。exe 1 つで動きます（Windows 10 / 11 に入っている WebView2 を使います）。初回に要るものは、`deploy.sh` の先頭に書いてあります。
+[cargo-xwin](https://github.com/rust-cross/cargo-xwin) で Windows 用の `timer.exe` をビルドし、インストール先（`%LOCALAPPDATA%\Timer\timer.exe`）に上書きコピーします。exe 1 つで動きます（Windows 10 / 11 に入っている WebView2 を使います）。初回に要るものは、`deploy.sh` の先頭に書いてあります。
 
-- コピー先は、環境変数 `TIMER_DEST` で変更できます。
+- コピー先は、環境変数 `TIMER_DEST` に Windows のパスで指定すると変更できます。
 - タイマーを起動したままだと上書きできないので、先に閉じてから実行してください。
 
 ### Windows / macOS の上でビルドする
@@ -82,7 +82,7 @@ xattr -dr com.apple.quarantine /Applications/Timer.app
 | `src/index.html` / `main.ts` / `main.css` | メインのウィンドウのページ |
 | `src/overlay.html` / `overlay.ts` / `overlay.css` | 全画面の表示のページ |
 | `src/time.ts` | 時間の入力の読み取りと、`↑` / `↓` での増減 |
-| `deploy.sh` | Windows 用の exe をビルドして Dropbox にコピーするスクリプト |
+| `deploy.sh` | Windows 用の exe をビルドしてインストール先にコピーするスクリプト |
 | `timer.ps1` | PowerShell 版のタイマー（Dropbox の `Timer.lnk` から起動） |
 | `docs/screenshot.png` | README のスクリーンショット（Windows 11、ダークテーマ） |
 | `app-icon.svg` | アプリのアイコンの元。`src-tauri/icons/` は `npx tauri icon app-icon.svg -o src-tauri/icons` で作り、モバイル用と Store 用は消している |
