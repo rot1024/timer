@@ -28,11 +28,11 @@ document.documentElement.lang = lang;
 
 if (overlay.kind === "warning") {
   message.textContent = text.minutesLeft(overlay.minutes);
-  document.body.style.setProperty("--max-opacity", "0.92");
+  document.body.style.setProperty("--backdrop-opacity", "0.55");
 } else {
   message.textContent = text.timeUp;
   document.body.classList.add("alert");
-  document.body.style.setProperty("--max-opacity", "0.96");
+  document.body.style.setProperty("--backdrop-opacity", "0.7");
   ok.textContent = text.ok;
   ok.hidden = false;
 

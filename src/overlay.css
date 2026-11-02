@@ -1,4 +1,4 @@
-/* ウィンドウは透明にして、ここで暗幕を描く。フェードもここでする。
+/* ウィンドウは透明にして、ここで暗幕を描く。透かすのは暗幕だけで、文字とボタンは透かさない。フェードもここでする。
    大きさは main.css と同じく、WinForms 版の位置と大きさの半分、文字は同じ pt */
 html {
   background: transparent;
@@ -16,7 +16,7 @@ body {
 
 body {
   position: relative;
-  background: rgb(4 42 80);
+  background: rgb(4 42 80 / var(--backdrop-opacity, 0.55));
   color: #f5f5f5;
   font-family: system-ui, "Segoe UI", "Yu Gothic UI", "Hiragino Sans", sans-serif;
   opacity: 0;
@@ -24,7 +24,7 @@ body {
 }
 
 body.shown {
-  opacity: var(--max-opacity, 0.92);
+  opacity: 1;
 }
 
 #message {
